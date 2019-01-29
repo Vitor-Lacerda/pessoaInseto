@@ -26,6 +26,9 @@ public class PlayerControl : MonoBehaviour {
 	public float deslocamentoHorizontalPicoPuloPequeno = 1.25f;
 	public float alturaPuloPequeno = 1f;
 
+	[Header("Componentes")]
+	public GameObject cameraPequeno;
+
 
 	/*Calculados*/
 	private float forcaPulo;
@@ -80,6 +83,9 @@ public class PlayerControl : MonoBehaviour {
 		Vector3 temp = transform.localScale;
 
 		mudandoTamanho = true;
+
+		//Troca a camera
+		cameraPequeno.SetActive(!isPequeno);
 
 		//'Interpola' ate o tamanho
 		while (quantidadeMudada < diferencaTamanho) {
