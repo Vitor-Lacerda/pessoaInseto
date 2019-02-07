@@ -10,6 +10,7 @@ public class PlayerControl : MonoBehaviour {
 	[Header("Valores Gerais")]
 	public float velocidadeHorizontal = 2.5f;
 	public float tamanhoRaioChao = 0.5f;
+	public float tamanhoRaioParede = 0.2f;
 	public float tamanhoGrande = 1;
 	public float tamanhoPequeno = 0.4f;
 	public float tempoDiminuicao = 0.1f;
@@ -35,11 +36,12 @@ public class PlayerControl : MonoBehaviour {
 	private float gravidade, gravidadeNormal;
 	private float decrementoTamanho, diferencaTamanho, razaoTamanho;
 	private float tamanhoAtual;
+	private Vector2 vetorGravidade;
 
 	/*Condicoes*/
 	private bool pulo, seguraPulo;
 	private bool isPequeno, isPequenoAntes;
-	private bool groundedAntes;
+	private bool grounded, groundedAntes;
 	private bool mudandoTamanho;
 
 	/*Componentes*/
@@ -70,6 +72,7 @@ public class PlayerControl : MonoBehaviour {
 		decrementoTamanho = diferencaTamanho / tempoDiminuicao;
 
 		tamanhoAtual = tamanhoGrande;
+		vetorGravidade = Vector2.up;
 
 
 
@@ -129,7 +132,7 @@ public class PlayerControl : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
-		bool grounded = IsGrounded ();
+		calculaChao ();
 		if (grounded && !groundedAntes) {
 			if (isPequeno != isPequenoAntes) {
 				CalculaValoresPulo ();
@@ -160,21 +163,26 @@ public class PlayerControl : MonoBehaviour {
 	}
 
 	void FixedUpdate(){
-		rigidBody2D.velocity = new Vector2 (moveX * velocidadeHorizontal, rigidBody2D.velocity.y);
+		if (isPequeno && vetorGravidade.x != 0) {
+			rigidBody2D.velocity = (Vector2)transform.right * moveX * velocidadeHorizontal;
+		} else {
+			rigidBody2D.velocity = new Vector2 (moveX * velocidadeHorizontal, rigidBody2D.velocity.y);
+		}
 
-		if(pulo){
+
+		if(pulo && !isPequeno){
 			rigidBody2D.velocity = new Vector2(rigidBody2D.velocity.x, forcaPulo);
 			gravidade = gravidadeNormal;
 		}
 
 		if(rigidBody2D.velocity.y < 0){ //Caindo
-			rigidBody2D.velocity += Vector2.up *gravidade * multiplicadorDescida *Time.deltaTime;
+			rigidBody2D.velocity += vetorGravidade *gravidade * multiplicadorDescida *Time.deltaTime;
 		}
 		else if(rigidBody2D.velocity.y > 0 && !seguraPulo){
-			rigidBody2D.velocity += Vector2.up *gravidade * multiplicadorPuloMenor *Time.deltaTime;
+			rigidBody2D.velocity += vetorGravidade *gravidade * multiplicadorPuloMenor *Time.deltaTime;
 
 		} else  {
-			rigidBody2D.velocity += Vector2.up *gravidade *Time.deltaTime;
+			rigidBody2D.velocity += vetorGravidade *gravidade *Time.deltaTime;
 		}
 
 		animator.SetFloat ("VelocidadeX", Mathf.Abs(rigidBody2D.velocity.x));
@@ -184,15 +192,31 @@ public class PlayerControl : MonoBehaviour {
 
 	}
 
-	protected bool IsGrounded(){
+	protected void calculaChao(){
 		
 		RaycastHit2D hit;
-		Debug.DrawRay (transform.position, Vector2.down * (tamanhoRaioChao), Color.white);
-		hit = Physics2D.Raycast (transform.position, Vector2.down, tamanhoRaioChao, camadasChao);
+		Debug.DrawRay (transform.position, -transform.up* (tamanhoRaioChao), Color.white);
+		hit = Physics2D.Raycast (transform.position, -transform.up, tamanhoRaioChao, camadasChao);
 		if (hit.collider != null) {
-			return true;
+			grounded = true;
+			vetorGravidade = hit.normal;
+			if (isPequeno) {
+				RaycastHit2D hitParede = Physics2D.Raycast (transform.position, transform.right*moveX, tamanhoRaioParede, camadasChao);
+				Debug.DrawRay (transform.position, transform.right*moveX*tamanhoRaioParede, Color.red);
+				if (hitParede.collider != null) {
+					Quaternion target = Quaternion.FromToRotation (Vector2.up, hitParede.normal);
+					transform.rotation = Quaternion.Lerp (transform.rotation, target, Time.deltaTime*10);
+				} else {
+					Quaternion target = Quaternion.FromToRotation (Vector2.up, hit.normal);
+					transform.rotation = Quaternion.Lerp (transform.rotation, target, Time.deltaTime*10);
+				}
+			}
+		} else {
+			grounded = false;
+			vetorGravidade = Vector2.up;
+			Quaternion target = Quaternion.identity;
+			transform.rotation = target;
 		}
-		return false;
 
 	}
 }
