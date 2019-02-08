@@ -6,6 +6,10 @@ using UnityEngine;
 [RequireComponent(typeof(Animator))]
 public class PlayerControl : MonoBehaviour {
 
+	/*Valores Fixos*/
+	private const float epsilon = 0.001f;
+
+
 	/*Parametros*/
 	[Header("Valores Gerais")]
 	public float velocidadeHorizontal = 2.5f;
@@ -16,7 +20,7 @@ public class PlayerControl : MonoBehaviour {
 	public float tempoDiminuicao = 0.1f;
 	public float multiplicadorDescida = 2.5f;
 	public float multiplicadorPuloMenor = 2f;
-	public LayerMask camadasChao;
+	public LayerMask camadasChao, paredeQueSobe;
 
 	[Header("Valores Grande")]
 	public float deslocamentoHorizontalPicoPulo = 1.25f;
@@ -36,10 +40,10 @@ public class PlayerControl : MonoBehaviour {
 	private float gravidade, gravidadeNormal;
 	private float decrementoTamanho, diferencaTamanho, razaoTamanho;
 	private float tamanhoAtual;
-	private Vector2 vetorGravidade;
+	private Vector2 vetorGravidade, ultimaNormal;
 
 	/*Condicoes*/
-	private bool pulo, seguraPulo;
+	private bool pulo, seguraPulo, puloParede;
 	private bool isPequeno, isPequenoAntes;
 	private bool grounded, groundedAntes;
 	private bool mudandoTamanho;
@@ -87,8 +91,11 @@ public class PlayerControl : MonoBehaviour {
 
 		mudandoTamanho = true;
 
+
 		//Troca a camera
 		cameraPequeno.SetActive(!isPequeno);
+
+
 
 		//'Interpola' ate o tamanho
 		while (quantidadeMudada < diferencaTamanho) {
@@ -112,11 +119,19 @@ public class PlayerControl : MonoBehaviour {
 		tamanhoAtual = transform.localScale.y;
 
 		isPequeno = !isPequeno;
+
+		if (!isPequeno && ultimaNormal.x != 0) {
+			puloParede = true;
+			Debug.Log ("Cresceu parede");
+		}
+		yield return null;
 		mudandoTamanho = false;
 
+		/*
 		if (groundedAntes) {
 			CalculaValoresPulo ();
 		}
+		*/
 
 
 	}
@@ -133,11 +148,13 @@ public class PlayerControl : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		calculaChao ();
+		/*
 		if (grounded && !groundedAntes) {
 			if (isPequeno != isPequenoAntes) {
 				CalculaValoresPulo ();
 			}
 		}
+		*/
 		pulo = Input.GetButtonDown ("Jump") && grounded;
 		seguraPulo = Input.GetButton ("Jump");
 		moveX = Input.GetAxisRaw ("Horizontal");
@@ -163,16 +180,29 @@ public class PlayerControl : MonoBehaviour {
 	}
 
 	void FixedUpdate(){
-		if (isPequeno && vetorGravidade.x != 0) {
+		if (isPequeno && ultimaNormal.x != 0) {
 			rigidBody2D.velocity = (Vector2)transform.right * moveX * velocidadeHorizontal;
 		} else {
 			rigidBody2D.velocity = new Vector2 (moveX * velocidadeHorizontal, rigidBody2D.velocity.y);
 		}
 
 
-		if(pulo && !isPequeno){
-			rigidBody2D.velocity = new Vector2(rigidBody2D.velocity.x, forcaPulo);
-			gravidade = gravidadeNormal;
+		if(pulo){
+			if (!isPequeno) {
+				rigidBody2D.velocity = new Vector2 (rigidBody2D.velocity.x, forcaPulo);
+				gravidade = gravidadeNormal;
+			} else {
+				if (ultimaNormal.x != 0 && ultimaNormal.y <= epsilon) {
+					rigidBody2D.velocity = ultimaNormal * forcaPulo;
+				}
+			}
+		}
+
+		if (puloParede) {
+			Debug.Log ("Fez pulo parede");
+			rigidBody2D.velocity = new Vector2(vetorGravidade.x * forcaPulo, forcaPulo*1.2f);
+			Debug.Log (rigidBody2D.velocity);
+			puloParede = false;
 		}
 
 		if(rigidBody2D.velocity.y < 0){ //Caindo
@@ -200,8 +230,9 @@ public class PlayerControl : MonoBehaviour {
 		if (hit.collider != null) {
 			grounded = true;
 			vetorGravidade = hit.normal;
+			ultimaNormal = hit.normal;
 			if (isPequeno) {
-				RaycastHit2D hitParede = Physics2D.Raycast (transform.position, transform.right*moveX, tamanhoRaioParede, camadasChao);
+				RaycastHit2D hitParede = Physics2D.Raycast (transform.position, transform.right*moveX, tamanhoRaioParede, paredeQueSobe);
 				Debug.DrawRay (transform.position, transform.right*moveX*tamanhoRaioParede, Color.red);
 				if (hitParede.collider != null) {
 					Quaternion target = Quaternion.FromToRotation (Vector2.up, hitParede.normal);
@@ -213,10 +244,16 @@ public class PlayerControl : MonoBehaviour {
 			}
 		} else {
 			grounded = false;
-			vetorGravidade = Vector2.up;
-			Quaternion target = Quaternion.identity;
-			transform.rotation = target;
+			resetaRotacao ();
 		}
 
 	}
+
+	protected void resetaRotacao(){
+		vetorGravidade = Vector2.up;
+		ultimaNormal = Vector2.up;
+		Quaternion target = Quaternion.identity;
+		transform.rotation = target;
+	}
+		
 }
