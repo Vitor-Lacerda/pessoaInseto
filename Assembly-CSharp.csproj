@@ -106,7 +106,11 @@
      <Compile Include="Assets\Cinemachine\Timeline\CinemachineMixer.cs" />
      <Compile Include="Assets\Cinemachine\Timeline\CinemachineShot.cs" />
      <Compile Include="Assets\Cinemachine\Timeline\CinemachineTrack.cs" />
-     <Compile Include="Assets\PlayerControl.cs" />
+     <Compile Include="Assets\Scripts\Grade.cs" />
+     <Compile Include="Assets\Scripts\Inimigo.cs" />
+     <Compile Include="Assets\Scripts\Interfaces\CresceInteractable.cs" />
+     <Compile Include="Assets\Scripts\Interfaces\IDamageable.cs" />
+     <Compile Include="Assets\Scripts\PlayerControl.cs" />
      <None Include="Assets\Cinemachine\ReleaseNotes.txt" />
  <Reference Include="UnityEditor.StandardEvents">
  <HintPath>C:/Users/vitor.lacerda/Documents/Jogos/PessoaInseto/pessoaInseto/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
