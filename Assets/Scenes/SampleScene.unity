@@ -407,6 +407,8 @@ MonoBehaviour:
   tempoDiminuicao: 0.15
   multiplicadorDescida: 2
   multiplicadorPuloMenor: 3
+  forcaEmpurraoDano: 6
+  tempoDBoost: 0.3
   deslocamentoHorizontalPicoPulo: 2.5
   alturaPulo: 3
   deslocamentoHorizontalPicoPuloPequeno: 1.25

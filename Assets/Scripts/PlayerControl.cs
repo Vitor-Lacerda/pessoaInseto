@@ -27,6 +27,8 @@ public class PlayerControl : MonoBehaviour {
 	public float tempoDiminuicao = 0.1f;
 	public float multiplicadorDescida = 2.5f;
 	public float multiplicadorPuloMenor = 2f;
+	public float forcaEmpurraoDano = 1f;
+	public float tempoDBoost = 0.2f;
 
 
 
@@ -53,7 +55,7 @@ public class PlayerControl : MonoBehaviour {
 	private LayerMask camadasChaoAtual;
 
 	/*Condicoes*/
-	private bool pulo, seguraPulo;
+	private bool pulo, seguraPulo, temControle, tomandoDano;
 	private bool isPequeno, isPequenoAntes;
 	private bool grounded, groundedAntes;
 	private bool mudandoTamanho;
@@ -72,6 +74,8 @@ public class PlayerControl : MonoBehaviour {
 		animator = this.GetComponent<Animator> ();
 		isPequeno = false;
 		isPequenoAntes = isPequeno;
+		temControle = true;
+		tomandoDano = false;
 		
 		CalculaValoresPulo ();
 
@@ -181,24 +185,30 @@ public class PlayerControl : MonoBehaviour {
 			}
 		}
 		*/
-		pulo = Input.GetButtonDown ("Jump") && grounded;
-		seguraPulo = Input.GetButton ("Jump");
-		moveX = Input.GetAxisRaw ("Horizontal");
 
 		animator.SetBool ("Grounded", grounded);
 
+		if (temControle) {
+			moveX = Input.GetAxisRaw ("Horizontal");
+			seguraPulo = Input.GetButton ("Jump");
+			pulo = Input.GetButtonDown ("Jump") && grounded;
 
-		if(moveX != 0){
-			transform.localScale = new Vector3 (tamanhoAtual * moveX / Mathf.Abs (moveX), transform.localScale.y, 1);
-		}
-
-
-		if (Input.GetKeyDown (KeyCode.Z) && !mudandoTamanho) {
-			if(!isPequeno || podeCrescer()){
-				StartCoroutine (RotinaTrocaTamanho());
+			if (moveX != 0) {
+				transform.localScale = new Vector3 (tamanhoAtual * moveX / Mathf.Abs (moveX), transform.localScale.y, 1);
 			}
-		}
 
+
+			if (Input.GetKeyDown (KeyCode.Z) && !mudandoTamanho) {
+				if (!isPequeno || podeCrescer ()) {
+					StartCoroutine (RotinaTrocaTamanho ());
+				}
+			}
+
+			if (Input.GetKeyDown (KeyCode.Q)) {
+				StartCoroutine (tomarDano ());
+			}
+
+		}
 		groundedAntes = grounded;
 
 
@@ -208,16 +218,17 @@ public class PlayerControl : MonoBehaviour {
 	}
 
 	void FixedUpdate(){
-		
-		rigidBody2D.velocity = new Vector2 (moveX * velocidadeHorizontal, rigidBody2D.velocity.y);
 
-
-
-		if(pulo){
-			if (!isPequeno) {
-				rigidBody2D.velocity = new Vector2 (rigidBody2D.velocity.x, forcaPulo);
-				gravidade = gravidadeNormal;
-			} 
+		if (temControle) {
+			rigidBody2D.velocity = new Vector2 (moveX * velocidadeHorizontal, rigidBody2D.velocity.y);
+	
+			if (pulo) {
+				if (!isPequeno) {
+					rigidBody2D.velocity = new Vector2 (rigidBody2D.velocity.x, forcaPulo);
+					gravidade = gravidadeNormal;
+				} 
+			}
+			animator.SetFloat ("VelocidadeX", Mathf.Abs (rigidBody2D.velocity.x));
 		}
 
 		if(rigidBody2D.velocity.y < 0){ //Caindo
@@ -230,7 +241,6 @@ public class PlayerControl : MonoBehaviour {
 			rigidBody2D.velocity += vetorGravidade *gravidade *Time.deltaTime;
 		}
 
-		animator.SetFloat ("VelocidadeX", Mathf.Abs(rigidBody2D.velocity.x));
 
 	}
 
@@ -260,6 +270,28 @@ public class PlayerControl : MonoBehaviour {
 			grounded = false;
 			resetaRotacao ();
 		}
+
+	}
+
+	protected IEnumerator tomarDano(){
+		if (!tomandoDano) {
+			Debug.Log ("Dano");
+			tomandoDano = true;
+			temControle = false;
+
+			float direcaoMovimento = moveX != 0 ? -moveX : -1;
+			rigidBody2D.velocity = new Vector2 (direcaoMovimento * forcaEmpurraoDano/2, forcaEmpurraoDano);
+
+			float timer = 0f;
+			while (timer < tempoDBoost) {
+				timer += Time.deltaTime;
+				yield return null;
+			}
+
+			tomandoDano = false;
+			temControle = true;
+		}
+		yield return null;
 
 	}
 
